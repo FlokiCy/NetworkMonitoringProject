@@ -1,0 +1,64 @@
+# فاصله زمانی بین هر دور پایش، بر حسب ثانیه.
+# با مقدار 10، Collector هر 10 ثانیه یک بار مقصدها را بررسی می‌کند.
+check_interval: 10
+
+# فهرست مقصدهای تحت پایش.
+targets:
+
+  - id: "core-router-snmp"
+    name: "Core Router CPU (Real SNMP)"
+    type: "snmp"
+    host: "127.0.0.1"
+    port: 1161
+    community: "public"
+    oid: "1.3.6.1.4.1.2021.11.9.0"
+    latency_threshold_ms: 30.0
+    anomaly_detection: true
+  # حالت 1 ــ پایش ICMP (Ping)
+  # برای بررسی پاسخ‌گویی یک IP در شبکه.
+
+  - id: "google-dns"
+    name: "Google Public DNS"
+    type: "icmp"
+    host: "8.8.8.8"
+    latency_threshold_ms: 20    # آستانه: اگر بالای 120 میلی‌ثانیه شد هشدار بده
+    anomaly_detection: true      # فعالسازی تشخیص ناهنجاری هوشمند
+  # # حالت 2 ــ پایش HTTP
+  # # برای بررسی در دسترس بودن اندپوینت سلامت FastAPI.
+
+  - id: "fastapi-backend"
+    name: "FastAPI App Status"
+    type: "http"
+    url: "http://127.0.0.1:8000/api/health"
+    latency_threshold_ms: 50
+    anomaly_detection: false
+  # # حالت 3 ــ پایش TCP روی پورت باز
+
+  - id: "local-tcp-service"
+    name: "Local Web Port (TCP)"
+    type: "tcp"
+    host: "127.0.0.1"
+    port: 8000
+    latency_threshold_ms: 30
+    anomaly_detection: false
+  # حالت آزمایشی 4 ــ پایش TCP روی پورت بسته
+
+  - id: "test-tcp-closed"
+    name: "Test TCP Closed Port"
+    type: "tcp"
+    host: "127.0.0.1"
+    port: 9999
+
+  # حالت آزمایشی 5 ــ پایش HTTP ناموفق
+
+  - id: "test-http-down"
+    name: "Test HTTP Unavailable"
+    type: "http"
+    url: "http://127.0.0.1:9999/"
+
+# توضیح:
+# در حال حاضر سه مقصد فعال داریم:
+# 1. ICMP: بررسی پاسخ‌گویی 8.8.8.8 با Ping.
+# 2. HTTP: بررسی اندپوینت سلامت FastAPI.
+# 3. TCP: بررسی باز بودن پورت 8000 روی رایانه خودمان.
+
