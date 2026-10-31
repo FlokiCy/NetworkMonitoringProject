@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>سامانه پیشرفته پایش شبکه | Network Monitor</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;600;700&display=swap');
+        body { font-family: 'Vazirmatn', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+
+    <!-- هدر صفحه -->
+    <header class="bg-slate-900 border-b border-slate-800 p-4 shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <span class="relative flex h-3.5 w-3.5">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500"></span>
+                </span>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-100">سامانه جامع پایش و تحلیل شبکه</h1>
+                    <p class="text-xs text-slate-400">پایش ترکیبی (زنده و شبیه‌سازی تجهیزات) با هشدار آستانه و ناهنجاری آماری</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span id="last-update" class="text-xs bg-slate-800 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700 font-mono">
+                    آخرین بروزرسانی: در حال دریافت...
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <!-- محتوای اصلی -->
+    <main class="container mx-auto p-4 md:p-6 space-y-6">
+
+        <!-- باکس آمار کلی (KPI Overview) -->
+        <section class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl shadow">
+                <span class="text-xs text-slate-400">تعداد کل مقاصد</span>
+                <p id="stat-total" class="text-2xl font-bold text-slate-100 mt-1">0</p>
+            </div>
+            <div class="bg-slate-900 border border-emerald-900/40 p-4 rounded-xl shadow">
+                <span class="text-xs text-emerald-400">سرویس‌های آنلاین (UP)</span>
+                <p id="stat-up" class="text-2xl font-bold text-emerald-400 mt-1">0</p>
+            </div>
+            <div class="bg-slate-900 border border-rose-900/40 p-4 rounded-xl shadow">
+                <span class="text-xs text-rose-400">سرویس‌های قطع (DOWN)</span>
+                <p id="stat-down" class="text-2xl font-bold text-rose-400 mt-1">0</p>
+            </div>
+            <div class="bg-slate-900 border border-amber-900/40 p-4 rounded-xl shadow">
+                <span class="text-xs text-amber-400">هشدارهای ثبت‌شده</span>
+                <p id="stat-alerts" class="text-2xl font-bold text-amber-400 mt-1">0</p>
+            </div>
+        </section>
+
+        <!-- وضعیت زنده‌ی کارت‌ها -->
+        <section>
+            <h2 class="text-base font-semibold mb-3 text-slate-300 flex items-center gap-2">
+                <span class="w-2 h-2 bg-indigo-500 rounded-full"></span>
+                وضعیت زنده مقاصد و تجهیزات تحت نظارت
+            </h2>
+            <div id="targets-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- کارت‌ها با JS اضافه می‌شوند -->
+            </div>
+        </section>
+
+        <!-- بخش نمودار دایره‌ای مصرف CPU -->
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h2 class="text-base font-semibold text-slate-200 flex items-center gap-2">
+                            <span class="w-2 h-2 bg-emerald-500 rounded-full"></span>
+                            مصرف CPU تجهیزات شبکه (زنده و شبیه‌سازی)
+                        </h2>
+                        <p class="text-xs text-slate-400 mt-1">
+                            نمایش تجهیزات SNMP و تجهیزات آزمایشگاهی
+                        </p>
+                    </div>
+                    <span class="text-xs bg-slate-800 px-2.5 py-1 rounded border border-slate-700 text-slate-300">درصد مصرف</span>
+                </div>
+                <div class="relative h-72">
+                    <canvas id="cpuChart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg flex flex-col justify-between">
+                <div>
+                    <h2 class="text-base font-semibold text-slate-200 mb-4 flex items-center gap-2">
+                        <span class="w-2 h-2 bg-amber-500 rounded-full"></span>
+                        راهنمای سطوح آستانه CPU
+                    </h2>
+
+                    <div class="space-y-3.5 text-sm">
+                        <div class="flex items-center justify-between p-2 rounded-lg bg-slate-850 border border-slate-800/80">
+                            <span class="flex items-center gap-2 text-slate-300 font-medium">
+                                <span class="w-3 h-3 rounded-full bg-emerald-400"></span>
+                                وضعیت پایدار (Normal)
+                            </span>
+                            <span class="text-emerald-400 font-mono font-semibold">۰–۶۹٪</span>
+                        </div>
+                        <div class="flex items-center justify-between p-2 rounded-lg bg-slate-850 border border-slate-800/80">
+                            <span class="flex items-center gap-2 text-slate-300 font-medium">
+                                <span class="w-3 h-3 rounded-full bg-amber-400"></span>
+                                هشدار بار بالا (Warning)
+                            </span>
+                            <span class="text-amber-400 font-mono font-semibold">۷۰–۸۴٪</span>
+                        </div>
+                        <div class="flex items-center justify-between p-2 rounded-lg bg-slate-850 border border-slate-800/80">
+                            <span class="flex items-center gap-2 text-slate-300 font-medium">
+                                <span class="w-3 h-3 rounded-full bg-rose-400"></span>
+                                وضعیت بحرانی (Critical)
+                            </span>
+                            <span class="text-rose-400 font-mono font-semibold">۸۵–۱۰۰٪</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="cpu-summary" class="mt-4 border-t border-slate-800 pt-4 text-xs text-slate-400">
+                    در حال محاسبه وضعیت CPU...
+                </div>
+            </div>
+        </section>
+
+        <!-- نمودار تاخیر -->
+        <section class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-base font-semibold text-slate-200 flex items-center gap-2">
+                    <span class="w-2 h-2 bg-sky-500 rounded-full"></span>
+                    نمودار تاخیر زمانی (Latency - ms)
+                </h2>
+                <span class="text-xs text-slate-400">۳۰ پایش اخیر</span>
+            </div>
+            <div class="relative h-64 sm:h-72">
+                <canvas id="latencyChart"></canvas>
+            </div>
+        </section>
+
+        <!-- جدول آخرین رویدادها و هشدارها -->
+        <section class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
+            <h2 class="text-base font-semibold mb-4 text-slate-200 flex items-center gap-2">
+                <span class="w-2 h-2 bg-amber-500 rounded-full"></span>
+                لاگ رویدادها، هشدارها و تغییر وضعیت‌ها
+            </h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-right text-sm">
+                    <thead class="bg-slate-800/60 text-slate-400 text-xs">
+                        <tr>
+                            <th class="p-3 rounded-r-lg">زمان ثبت</th>
+                            <th class="p-3">شناسه مقصد</th>
+                            <th class="p-3">نوع رویداد</th>
+                            <th class="p-3 rounded-l-lg">جزئیات و شرح پیام</th>
+                        </tr>
+                    </thead>
+                    <tbody id="events-table-body" class="divide-y divide-slate-800/60 text-slate-300">
+                        <!-- ردیف‌ها با JS اضافه می‌شوند -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        let latencyChartInstance = null;
+        let cpuChartInstance = null;
+
+        async function fetchData() {
+            try {
+                // ۱. وضعیت زنده کارت‌ها
+                const statusRes = await fetch("/api/targets/status");
+                const targets = await statusRes.json();
+                updateTargetsGrid(targets);
+                updateCpuChart(targets);
+
+                // ۲. تاریخچه برای نمودار خطی Latency
+                const historyRes = await fetch("/api/history?limit=30");
+                const history = await historyRes.json();
+                updateLatencyChart(history);
+
+                // ۳. لیست رویدادها و هشدارها
+                const eventsRes = await fetch("/api/events?limit=15");
+                const events = await eventsRes.json();
+                updateEventsTable(events);
+
+                // بروزرسانی زمان
+                document.getElementById("last-update").innerText =
+                    "آخرین پایش: " + new Date().toLocaleTimeString("fa-IR");
+            } catch (err) {
+                console.error("خطا در ارتباط با API مانیتورینگ:", err);
+            }
+        }
+
+        function updateTargetsGrid(targets) {
+            const grid = document.getElementById("targets-grid");
+            grid.innerHTML = "";
+            const list = Array.isArray(targets) ? targets : Object.values(targets);
+
+            let upCount = 0;
+            let downCount = 0;
+
+            list.forEach((item) => {
+                const isUp = item.status === "UP";
+                if (isUp) upCount++;
+                else downCount++;
+
+                const card = document.createElement("div");
+                card.className = `p-4 rounded-xl border ${
+                    isUp
+                        ? "bg-slate-900 border-emerald-500/30"
+                        : "bg-slate-900 border-rose-500/40"
+                } shadow-md`;
+
+                const latencyText =
+                    item.response_time_ms !== null && item.response_time_ms !== undefined
+                        ? `${Number(item.response_time_ms).toFixed(1)} ms`
+                        : "N/A";
+
+                const isSimulated = item.check_type && item.check_type.startsWith("sim-");
+                const isSnmp = item.check_type === "snmp";
+
+                const cpuValue = Number(item.status_code);
+                const hasCpuValue =
+                    item.status_code !== null &&
+                    item.status_code !== undefined &&
+                    Number.isFinite(cpuValue) &&
+                    (isSimulated || isSnmp);
+
+                let cpuInfo = "";
+                if (hasCpuValue) {
+                    let cpuColor = "text-emerald-400";
+                    let cpuLabel = "عادی";
+
+                    if (cpuValue >= 85) {
+                        cpuColor = "text-rose-400";
+                        cpuLabel = "بحرانی";
+                    } else if (cpuValue >= 70) {
+                        cpuColor = "text-amber-400";
+                        cpuLabel = "بالا";
+                    }
+
+                    cpuInfo = `
+                        <div class="flex justify-between items-center">
+                            <span>مصرف CPU تجهیز:</span>
+                            <span class="${cpuColor} font-mono font-semibold">
+                                ${cpuValue}% <span class="text-[10px] opacity-80">(${cpuLabel})</span>
+                            </span>
+                        </div>
+                    `;
+                }
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-center mb-3">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <span class="font-bold text-slate-200 text-sm">${item.target_name || item.target_id}</span>
+                            ${
+                                isSimulated
+                                    ? '<span class="text-[10px] bg-sky-900/50 text-sky-300 border border-sky-700/60 px-1.5 py-0.5 rounded">آزمایشگاهی (SIM)</span>'
+                                    : ''
+                            }
+                        </div>
+                        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                            isUp
+                                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                                : "bg-rose-500/20 text-rose-400 border border-rose-500/30"
+                        }">${item.status}</span>
+                    </div>
+                    <div class="space-y-1.5 text-xs text-slate-400">
+                        <div class="flex justify-between">
+                            <span>نوع پایش / اینترفیس:</span>
+                            <span class="text-slate-200 uppercase font-mono">${item.check_type || "N/A"}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>زمان پاسخ (Latency):</span>
+                            <span class="text-slate-200 font-mono font-medium">${latencyText}</span>
+                        </div>
+                        ${cpuInfo}
+                        <div class="flex justify-between truncate">
+                            <span>وضعیت / رویداد:</span>
+                            <span class="${item.error_message ? "text-rose-400" : "text-slate-400"} truncate">${
+                                item.error_message || "پایدار (Normal)"
+                            }</span>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+
+            document.getElementById("stat-total").innerText = list.length;
+            document.getElementById("stat-up").innerText = upCount;
+            document.getElementById("stat-down").innerText = downCount;
+        }
+
+        function getCpuColor(value) {
+            if (value >= 85) return "#fb7185"; // قرمز
+            if (value >= 70) return "#fbbf24"; // زرد
+            return "#34d399";                  // سبز
+        }
+
+        function updateCpuChart(targets) {
+            const list = Array.isArray(targets) ? targets : Object.values(targets || {});
+
+            const cpuTargets = list.filter((item) => {
+                const isSimulated = item.check_type && item.check_type.startsWith("sim-");
+                const isSnmp = item.check_type === "snmp";
+                const value = Number(item.status_code);
+
+                return (
+                    (isSimulated || isSnmp) &&
+                    item.status_code !== null &&
+                    item.status_code !== undefined &&
+                    Number.isFinite(value) &&
+                    value >= 0 &&
+                    value <= 100
+                );
+            });
+
+            const labels = cpuTargets.map((item) => item.target_name || item.target_id);
+            const values = cpuTargets.map((item) => Number(item.status_code));
+            const colors = values.map(getCpuColor);
+
+            const summary = document.getElementById("cpu-summary");
+            if (summary) {
+                const critical = values.filter((val) => val >= 85).length;
+                const warning = values.filter((val) => val >= 70 && val < 85).length;
+                const normal = values.filter((val) => val < 70).length;
+
+                summary.innerHTML = `
+                    <div class="flex justify-between mb-2">
+                        <span>تعداد تجهیزات پردازشی فعال:</span>
+                        <strong class="text-slate-200 font-mono text-sm">${values.length}</strong>
+                    </div>
+                    <div class="flex justify-between font-medium">
+                        <span class="text-emerald-400">عادی: ${normal}</span>
+                        <span class="text-amber-400">بالا: ${warning}</span>
+                        <span class="text-rose-400">بحرانی: ${critical}</span>
+                    </div>
+                `;
+            }
+
+            const canvas = document.getElementById("cpuChart");
+            if (!canvas) return;
+
+            if (cpuChartInstance) {
+                cpuChartInstance.data.labels = labels;
+                cpuChartInstance.data.datasets[0].data = values;
+                cpuChartInstance.data.datasets[0].backgroundColor = colors;
+                cpuChartInstance.update();
+                return;
+            }
+
+            cpuChartInstance = new Chart(canvas.getContext("2d"), {
+                type: "doughnut",
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: "مصرف CPU (%)",
+                            data: values,
+                            backgroundColor: colors,
+                            borderColor: "#0f172a",
+                            borderWidth: 3,
+                            hoverOffset: 8,
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: "60%",
+                    plugins: {
+                        legend: {
+                            position: "bottom",
+                            labels: {
+                                color: "#cbd5e1",
+                                padding: 14,
+                                font: { family: "Vazirmatn", size: 11 },
+                                usePointStyle: true,
+                            },
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => ` مصرف پردازنده: ${ctx.raw}%`,
+                            },
+                        },
+                    },
+                },
+            });
+        }
+
+        function getBadgeForEvent(type) {
+            switch (type) {
+                case "DOWN":
+                    return '<span class="px-2 py-0.5 rounded text-xs bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold">DOWN</span>';
+                case "RECOVERED":
+                    return '<span class="px-2 py-0.5 rounded text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">RECOVERED</span>';
+                case "THRESHOLD_ALERT":
+                    return '<span class="px-2 py-0.5 rounded text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30">هشدار آستانه</span>';
+                case "THRESHOLD_NORMAL":
+                    return '<span class="px-2 py-0.5 rounded text-xs bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">رفع هشدار</span>';
+                case "ANOMALY_DETECTED":
+                    return '<span class="px-2 py-0.5 rounded text-xs bg-purple-500/20 text-purple-300 border border-purple-500/30">ناهنجاری (AI)</span>';
+                default:
+                    return `<span class="px-2 py-0.5 rounded text-xs bg-slate-700 text-slate-300">${type}</span>`;
+            }
+        }
+
+        function updateEventsTable(events) {
+            const tbody = document.getElementById("events-table-body");
+            tbody.innerHTML = "";
+            if (!events || events.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-500">هیچ رویدادی تاکنون ثبت نشده است.</td></tr>`;
+                document.getElementById("stat-alerts").innerText = 0;
+                return;
+            }
+
+            let alertCount = 0;
+            events.forEach((ev) => {
+                if (ev.event_type !== "RECOVERED" && ev.event_type !== "THRESHOLD_NORMAL") {
+                    alertCount++;
+                }
+
+                const row = document.createElement("tr");
+                row.className = "hover:bg-slate-800/40 transition-colors";
+                row.innerHTML = `
+                    <td class="p-3 text-xs text-slate-400 font-mono">${ev.created_at || "N/A"}</td>
+                    <td class="p-3 font-semibold text-slate-200 text-xs">${ev.target_id}</td>
+                    <td class="p-3">${getBadgeForEvent(ev.event_type)}</td>
+                    <td class="p-3 text-xs text-slate-300">${ev.description}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            document.getElementById("stat-alerts").innerText = alertCount;
+        }
+
+        function updateLatencyChart(history) {
+            if (!history || history.length === 0) return;
+
+            const labels = history.map((item) => (item.checked_at ? item.checked_at.split(" ")[1] : ""));
+            const dataPoints = history.map((item) => item.response_time_ms);
+
+            if (!latencyChartInstance) {
+                const ctx = document.getElementById("latencyChart").getContext("2d");
+                latencyChartInstance = new Chart(ctx, {
+                    type: "line",
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: "تاخیر پاسخ بر حسب ms",
+                                data: dataPoints,
+                                borderColor: "#38bdf8",
+                                backgroundColor: "rgba(56, 189, 248, 0.1)",
+                                borderWidth: 2,
+                                pointBackgroundColor: "#0284c7",
+                                pointRadius: 3,
+                                fill: true,
+                                tension: 0.3,
+                            },
+                        ],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                grid: { color: "#1e293b" },
+                                ticks: { color: "#94a3b8" },
+                            },
+                            x: {
+                                grid: { color: "#1e293b" },
+                                ticks: { color: "#94a3b8", maxRotation: 0 },
+                            },
+                        },
+                        plugins: {
+                            legend: { labels: { color: "#cbd5e1", font: { family: "Vazirmatn" } } },
+                        },
+                    },
+                });
+            } else {
+                latencyChartInstance.data.labels = labels;
+                latencyChartInstance.data.datasets[0].data = dataPoints;
+                latencyChartInstance.update();
+            }
+        }
+
+        // فراخوانی دوره‌ای
+        fetchData();
+        setInterval(fetchData, 4000);
+    </script>
+</body>
+</html>

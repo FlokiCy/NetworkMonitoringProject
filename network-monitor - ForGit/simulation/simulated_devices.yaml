@@ -1,0 +1,60 @@
+# simulation/simulated_devices.yaml
+# تنظیمات محیط شبیه‌سازی تجهیزات شبکه (Lab Simulation Topology)
+
+simulation_interval: 10 # فاصله زمانی هر دور شبیه‌سازی به ثانیه
+
+devices:
+  - id: "sim-router-core"
+    name: "Core Gateway Router"
+    device_type: "router"
+    ip: "192.168.1.1"
+    base_latency_ms: 12.0
+    latency_jitter: 4.0
+    base_cpu: 28.0
+    base_ram: 45.0
+    base_packet_loss: 0.0
+    latency_threshold_ms: 40.0
+    anomaly_detection: true
+    # سناریوی قطعی تستی: هر چند ثانیه یک بار موقتا قطع شود (0 = غیرفعال)
+    chaos_down_interval_sec: 0
+
+  - id: "sim-switch-access"
+    name: "Access Switch 24P"
+    device_type: "switch"
+    ip: "192.168.1.2"
+    base_latency_ms: 4.5
+    latency_jitter: 1.5
+    base_cpu: 18.0
+    base_ram: 32.0
+    base_packet_loss: 0.0
+    latency_threshold_ms: 25.0
+    anomaly_detection: false
+    chaos_down_interval_sec: 0
+
+  - id: "sim-srv-db"
+    name: "Database Server (Postgres)"
+    device_type: "server"
+    ip: "192.168.1.50"
+    port: 5432
+    base_latency_ms: 8.0
+    latency_jitter: 3.0
+    base_cpu: 65.0 # سرور زیر بار پردازشی
+    base_ram: 78.0
+    base_packet_loss: 0.0
+    latency_threshold_ms: 35.0
+    anomaly_detection: true
+    chaos_down_interval_sec: 0
+
+  - id: "sim-srv-web"
+    name: "Production Web API"
+    device_type: "server"
+    ip: "192.168.1.80"
+    port: 80
+    base_latency_ms: 18.0
+    latency_jitter: 6.0
+    base_cpu: 40.0
+    base_ram: 55.0
+    base_packet_loss: 0.0
+    latency_threshold_ms: 60.0
+    anomaly_detection: true
+    chaos_down_interval_sec: 120 # هر 2 دقیقه یک بار قطعی 20 ثانیه‌ای برای آزمودن داشبورد

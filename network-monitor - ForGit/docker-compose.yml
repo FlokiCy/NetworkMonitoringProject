@@ -1,0 +1,11 @@
+services:
+  monitor-app:
+    build: .
+    container_name: network_monitor_container
+    ports:
+      - "8000:8000"   # دسترسی به API از ویندوز
+      - "1161:1161/udp" # دسترسی به SNMP (UDP)
+    volumes:
+      - ./data:/app/data # ذخیره دیتابیس در ویندوز (ماندگاری داده)
+      - ./config:/app/config # دسترسی به فایل تنظیمات
+    restart: always
